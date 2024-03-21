@@ -29,8 +29,9 @@ def start(message):
 # Обработчик получения контакта
 @bot.message_handler(content_types=['contact'])
 def contact_received(message):
+    global contact
     contact = message.contact
-    sql = f"SELECT id FROM stud WHERE id = %s"
+    sql = f"SELECT id FROM work WHERE id = %s"
     cursor.execute(sql, (contact.phone_number,))
     number = cursor.fetchone()
     print(contact.phone_number)
@@ -75,7 +76,9 @@ def handle_messages(message):
     global Id
     if message.text == "Принять":
         bot.send_message(message.chat.id, "Заявка принята!")
-        cursor.execute("UPDATE applications SET status = 'В работе' WHERE id = %s",(Id,))
+        cursor.execute(f"SELECT fio FROM work WHERE id = {contact.phone_number}")
+        FIO = cursor.fetchone()[0]
+        cursor.execute(f"UPDATE applications SET status = 'В работе', fio_work = '{FIO}' WHERE id = %s",(Id,))
         conn.commit()
         markup = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
         item = types.KeyboardButton("Завершить работу")
