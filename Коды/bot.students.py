@@ -62,5 +62,5 @@ def process_description_step(message):
     description = message.text
     bot.send_message(message.chat.id, f"Описание работы: {description}\nСпасибо за заполнение анкеты! Ваша заявка будет рассмотрена в ближайшее время.")
 
-if name == 'main':
+if __name__ == '__main__':
     bot.polling(none_stop=True)
