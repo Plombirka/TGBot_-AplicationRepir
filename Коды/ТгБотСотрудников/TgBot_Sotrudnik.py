@@ -2,6 +2,8 @@ import telebot
 from telebot import types
 import psycopg2
 from psycopg2 import Error
+import time
+import threading
 
 TOKEN = '7081394328:AAFGSiobnfr9BRe8CoXiiJ7tH_s7W6zquY8'
 bot = telebot.TeleBot(TOKEN)
@@ -41,21 +43,18 @@ def contact_received(message):
         number = str(number[0])
     if number:
         bot.send_message(message.chat.id, f"Спасибо за предоставленный номер телефона: {contact.phone_number}")
-        markup = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
-        item = types.KeyboardButton("Начать работу")
-        markup.add(item)
-        bot.send_message(message.chat.id, "Нажмите на кнопку что бы узнать если для вас заявки или нет", reply_markup=markup)
+        threading.Thread(target=zayvka(message)).start()
     else:
         bot.send_message(message.chat.id, f"Вы не являетесь сотрудником")
 
-@bot.message_handler(func = lambda message:message.text in ["Начать работу"])
-def handle_message(message):
-    global Id
-    if message.text == "Начать работу":
+def zayvka(message):
+    za = True
+    while za == True:
+        global Id
         sql = f"SELECT id, fio_stud, frame, room, description FROM applications WHERE status = 'В обработке'"
         cursor.execute(sql)
         job = cursor.fetchone()
-        if job != None:
+        if job is not None:
             print(job)
             Id = job[0]
             FIO = job[1]
@@ -68,8 +67,9 @@ def handle_message(message):
             item = types.KeyboardButton("Отклонить")
             markup.add(item)
             bot.send_message(message.chat.id, f"ФИО студента: {FIO}\nКорпус №{korpus}\nКомната №{room}\nОписание работы: {description}",reply_markup=markup)
+            za = False
         else:
-            bot.send_message(message.chat.id, "Сейчас нет доступных заявок, попробуйте позже")
+            time.sleep(7)
 
 @bot.message_handler(func=lambda message: message.text in ["Принять","Отклонить"])
 def handle_messages(message):
@@ -81,7 +81,7 @@ def handle_messages(message):
         cursor.execute(f"UPDATE applications SET status = 'В работе', fio_work = '{FIO}' WHERE id = %s",(Id,))
         conn.commit()
         markup = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
-        item = types.KeyboardButton("Завершить работу")
+        item = types.KeyboardButton("Завершить заявку")
         markup.add(item)
         bot.send_message(message.chat.id, "Нажмите на кнопку если работа была выполнена", reply_markup=markup)
 
@@ -101,36 +101,29 @@ def handle_message(message):
         bot.send_message(message.chat.id, f"Заявка отклонена по причине: {message.text}")
         cursor.execute(f"UPDATE applications SET status = 'Отклонена по причине: {message.text}' WHERE id = %s",(Id,))
         conn.commit()
-        markup = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
-        item = types.KeyboardButton("Начать работу")
-        markup.add(item)
-        bot.send_message(message.chat.id, "Нажмите на кнопку что бы узнать если для вас заявки или нет", reply_markup=markup)
+        threading.Thread(target=zayvka(message)).start()
 
     elif message.text == "Другое":
         hide_markup = types.ReplyKeyboardRemove()
         bot.send_message(message.chat.id, "Введите причину отклонения:", reply_markup=hide_markup)
         bot.register_next_step_handler(message, process_other_reason)
 
-@bot.message_handler(func = lambda message:message.text in ["Завершить работу"])
+@bot.message_handler(func = lambda message:message.text in ["Завершить заявку"])
 def handle_message(message):
-    if message.text == "Завершить работу":
-        bot.send_message(message.chat.id, "Спасибо за выполнение заявки")
+    if message.text == "Завершить заявку":
+        hide_markup = types.ReplyKeyboardRemove()
+        bot.send_message(message.chat.id, "Спасибо за выполнение заявки", reply_markup= hide_markup)
         cursor.execute("UPDATE applications SET status = 'Завершена' WHERE id = %s",(Id,))
         conn.commit()
-        markup = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
-        item = types.KeyboardButton("Начать работу")
-        markup.add(item)
-        bot.send_message(message.chat.id, "Нажмите на кнопку что бы узнать если для вас заявки или нет", reply_markup=markup)
+        threading.Thread(target=zayvka(message)).start()
 
 def process_other_reason(message):
     reason = message.text
-    bot.send_message(message.chat.id, f"Заявка отклонена по причине: {reason}")
+    hide_markup = types.ReplyKeyboardRemove()
+    bot.send_message(message.chat.id, f"Заявка отклонена по причине: {reason}", reply_markup=hide_markup)
     cursor.execute(f"UPDATE applications SET status = 'Отклонена по причине: {reason}' WHERE id = %s",(Id,))
     conn.commit()
-    markup = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
-    item = types.KeyboardButton("Начать работу")
-    markup.add(item)
-    bot.send_message(message.chat.id, "Нажмите на кнопку что бы узнать если для вас заявки или нет", reply_markup=markup)
+    threading.Thread(target=zayvka(message)).start()
 
 if __name__ == "__main__":
     # Запускаем телеграм-бота
