@@ -43,6 +43,10 @@ def contact_received(message):
         number = str(number[0])
     if number:
         bot.send_message(message.chat.id, f"Спасибо за предоставленный номер телефона: {contact.phone_number}")
+        chat_id=message.chat.id
+        print(chat_id)
+        cursor.execute(f'UPDATE work SET chatid = %s WHERE id = %s',(chat_id,contact.phone_number))
+        conn.commit()
         threading.Thread(target=zayvka(message)).start()
     else:
         bot.send_message(message.chat.id, f"Вы не являетесь сотрудником")
@@ -51,7 +55,11 @@ def zayvka(message):
     za = True
     while za == True:
         global Id
-        sql = f"SELECT id, fio_stud, frame, room, description FROM applications WHERE status = 'В обработке'"
+        cursor.execute(f"SELECT job_title FROM work WHERE id = {contact.phone_number}")
+        job_work = cursor.fetchone()[0]
+        cursor.execute(f'SELECT chatid FROM work WHERE id = {contact.phone_number}')
+        chat_id = cursor.fetchone()[0]
+        sql = f"SELECT id, fio_stud, frame, room, description FROM applications WHERE status = 'В обработке' and job_title = '{job_work}'"
         cursor.execute(sql)
         job = cursor.fetchone()
         if job is not None:
@@ -66,15 +74,16 @@ def zayvka(message):
             markup.add(item)
             item = types.KeyboardButton("Отклонить")
             markup.add(item)
-            bot.send_message(message.chat.id, f"ФИО студента: {FIO}\nКорпус №{korpus}\nКомната №{room}\nОписание работы: {description}",reply_markup=markup)
+            bot.send_message(chat_id, f"ФИО студента: {FIO}\nКорпус №{korpus}\nКомната №{room}\nОписание работы: {description}",reply_markup=markup)
             za = False
         else:
             time.sleep(7)
 
 @bot.message_handler(func=lambda message: message.text in ["Принять","Отклонить"])
 def handle_messages(message):
-    global Id
+    global Id,za
     if message.text == "Принять":
+        za = True
         bot.send_message(message.chat.id, "Заявка принята!")
         cursor.execute(f"SELECT fio FROM work WHERE id = {contact.phone_number}")
         FIO = cursor.fetchone()[0]
@@ -86,6 +95,7 @@ def handle_messages(message):
         bot.send_message(message.chat.id, "Нажмите на кнопку если работа была выполнена", reply_markup=markup)
 
     elif message.text == "Отклонить":
+        za = True
         markup = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
         item = types.KeyboardButton("Недостаточно рук")
         markup.add(item)
