@@ -96,13 +96,13 @@ def process_description_step(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     button = types.KeyboardButton("Узнать статус")
     markup.add(button)
-    bot.send_message(message.chat.id, "Нажмите на кнопку что бы узнать статус вашей заявки", reply_markup=markup)
+    bot.send_message(message.chat.id, "Нажмите на кнопку, чтобы узнать статус вашей заявки", reply_markup=markup)
 @bot.message_handler(func=lambda message:message.text in ["Узнать статус"])
 def handle_text(message):
     cursor.execute(f"SELECT status FROM applications WHERE id = {id_max}")
     status = cursor.fetchone()[0]
     if status == "В обработке":
-        bot.send_message(message.chat.id,"Ваша заявка ещё не была принята не одинм сотрудником")
+        bot.send_message(message.chat.id,"Ваша заявка ещё не была принята ни одинм сотрудником")
     elif status == "В работе":
         cursor.execute(f"SELECT fio_work FROM applications WHERE id = {id_max}")
         bot.send_message(message.chat.id,f"Ваша заявка была принята сотрудником {cursor.fetchone()[0]}")
