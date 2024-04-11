@@ -92,7 +92,7 @@ def handle_messages(message):
         markup = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
         item = types.KeyboardButton("Завершить заявку")
         markup.add(item)
-        bot.send_message(message.chat.id, "Нажмите на кнопку если работа была выполнена", reply_markup=markup)
+        bot.send_message(message.chat.id, "Нажмите на кнопку, если работа была выполнена", reply_markup=markup)
 
     elif message.text == "Отклонить":
         za = True
